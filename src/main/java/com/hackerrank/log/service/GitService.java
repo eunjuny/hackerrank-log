@@ -37,11 +37,21 @@ public class GitService {
      * @return 성공 메시지
      */
     public Mono<String> commitAndPush(String absoluteFilePath, String commitMessage) {
-        File workingDir = new File(".");
+        // 파일의 Git 저장소 디렉토리 찾기
+        File file = new File(absoluteFilePath);
+        File workingDir = findGitRepository(file.getParentFile());
         
-        log.info("Git add/commit/push 시작: {}", absoluteFilePath);
+        if (workingDir == null) {
+            log.error("Git 저장소를 찾을 수 없습니다: {}", absoluteFilePath);
+            return Mono.just("❌ Git 저장소를 찾을 수 없습니다");
+        }
         
-        return runGit(List.of("git", "add", absoluteFilePath), workingDir)
+        log.info("Git add/commit/push 시작: {} (working dir: {})", absoluteFilePath, workingDir.getAbsolutePath());
+        
+        // 상대 경로로 변환
+        String relativePath = workingDir.toPath().relativize(file.toPath()).toString();
+        
+        return runGit(List.of("git", "add", relativePath), workingDir)
                 .flatMap(addOut -> {
                     log.debug("Git add 완료: {}", addOut);
                     return runGit(List.of("git", "commit", "-m", commitMessage), workingDir)
@@ -118,6 +128,28 @@ public class GitService {
         return runGit(List.of("git", "rev-parse", "--is-inside-work-tree"), workingDir)
                 .map(result -> "Git 저장소 확인: " + result)
                 .onErrorResume(e -> Mono.just("Git 저장소가 아닙니다: " + e.getMessage()));
+    }
+    
+    /**
+     * 주어진 디렉토리부터 상위로 올라가면서 .git 디렉토리를 찾음
+     * 
+     * @param directory 시작 디렉토리
+     * @return Git 저장소 루트 디렉토리 (없으면 null)
+     */
+    private File findGitRepository(File directory) {
+        File current = directory;
+        
+        while (current != null) {
+            File gitDir = new File(current, ".git");
+            if (gitDir.exists() && gitDir.isDirectory()) {
+                log.debug("Git 저장소 발견: {}", current.getAbsolutePath());
+                return current;
+            }
+            current = current.getParentFile();
+        }
+        
+        log.warn("Git 저장소를 찾을 수 없습니다: {}", directory.getAbsolutePath());
+        return null;
     }
 }
 
