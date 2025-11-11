@@ -1,98 +1,25 @@
 // ==UserScript==
 // @name         HackerRank GitHub Logger
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.3
 // @description  HackerRank 제출을 자동으로 GitHub에 저장
 // @author       You
-// @match        https://www.hackerrank.com/challenges/*
-// @match        https://www.hackerrank.com/challenges/*/*
-// @grant        GM_xmlhttpRequest
+// @match        https://www.hackerrank.com/*
+// @grant        none
 // @connect      localhost
+// @inject-into  page
+// @run-at       document-start
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     const SERVER_URL = 'http://localhost:9090/api/hackerrank/submit';
-    
-    console.log('[HackerRank Logger] 스크립트 로드됨');
 
-    // 원래 fetch 함수 저장
-    const originalFetch = window.fetch;
+    function log(...args) {
+        console.log('[HackerRank Logger]', ...args);
+    }
 
-    // fetch 함수 오버라이드
-    window.fetch = async function(...args) {
-        const [url, options] = args;
-        
-        // HackerRank 제출 API 호출 감지
-        if (url && typeof url === 'string' && 
-            (url.includes('/submissions') || url.includes('/contests/master/challenges'))) {
-            
-            console.log('[HackerRank Logger] 제출 요청 감지:', url);
-            
-            try {
-                // 요청 데이터 파싱
-                if (options && options.body) {
-                    const body = JSON.parse(options.body);
-                    console.log('[HackerRank Logger] 제출 데이터:', body);
-                    
-                    // 페이지에서 문제 정보 추출
-                    const problemName = document.querySelector('.challenge-name')?.textContent?.trim() || 
-                                      document.querySelector('h1')?.textContent?.trim() ||
-                                      'unknown';
-                    
-                    const difficulty = document.querySelector('.difficulty-label')?.textContent?.trim() || '';
-                    
-                    // URL에서 challenge ID 추출
-                    const challengeId = window.location.pathname.split('/challenges/')[1]?.split('/')[0] || '';
-                    
-                    // 제출 데이터 구성
-                    const submissionData = {
-                        problemName: problemName,
-                        code: body.code || body.source || '',
-                        language: body.language || '',
-                        challengeId: challengeId,
-                        difficulty: difficulty,
-                        tags: [],
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    console.log('[HackerRank Logger] 서버로 전송:', submissionData);
-                    
-                    // 로컬 서버로 전송
-                    GM_xmlhttpRequest({
-                        method: 'POST',
-                        url: SERVER_URL,
-                        data: JSON.stringify(submissionData),
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        onload: function(response) {
-                            console.log('[HackerRank Logger] 서버 응답:', response.responseText);
-                            if (response.status === 200) {
-                                console.log('[HackerRank Logger] ✓ GitHub에 저장 완료!');
-                                showNotification('✅ GitHub에 저장되었습니다!', 'success');
-                            } else {
-                                console.error('[HackerRank Logger] ✗ 저장 실패:', response.status);
-                                showNotification('❌ 저장 실패: ' + response.status, 'error');
-                            }
-                        },
-                        onerror: function(error) {
-                            console.error('[HackerRank Logger] ✗ 요청 실패:', error);
-                            showNotification('❌ 서버 연결 실패. 서버가 실행 중인지 확인하세요.', 'error');
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('[HackerRank Logger] 에러:', error);
-            }
-        }
-        
-        // 원래 fetch 함수 호출
-        return originalFetch.apply(this, args);
-    };
-
-    // 알림 표시 함수
     function showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.textContent = message;
@@ -109,16 +36,135 @@
             font-family: Arial, sans-serif;
             font-size: 14px;
         `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.style.transition = 'opacity 0.5s';
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 500);
-        }, 3000);
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.transition = 'opacity 0.5s';
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        });
     }
 
-    console.log('[HackerRank Logger] 준비 완료!');
+    function buildSubmissionData(body) {
+        const problemName =
+            document.querySelector('.challenge-name')?.textContent?.trim() ||
+            document.querySelector('h1')?.textContent?.trim() ||
+            'unknown';
+        const difficulty = document.querySelector('.difficulty-label')?.textContent?.trim() || '';
+        const challengeId = window.location.pathname.split('/challenges/')[1]?.split('/')[0] || '';
+
+        const code =
+            body?.code ??
+            body?.source ??
+            body?.model?.code ??
+            '';
+        const language =
+            body?.language ??
+            body?.lang ??
+            body?.model?.language ??
+            '';
+
+        return {
+            problemName,
+            code,
+            language,
+            challengeId,
+            difficulty,
+            tags: [],
+            timestamp: new Date().toISOString(),
+        };
+    }
+
+    async function sendToServer(submissionData) {
+        try {
+            const res = await fetch(SERVER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submissionData),
+                mode: 'cors',
+                cache: 'no-cache',
+            });
+            const text = await res.text();
+            log('서버 응답:', res.status, text);
+            if (res.ok) {
+                showNotification('✅ GitHub에 저장되었습니다!', 'success');
+            } else {
+                showNotification(`❌ 저장 실패: ${res.status}`, 'error');
+            }
+        } catch (err) {
+            console.error('[HackerRank Logger] 요청 실패:', err);
+            showNotification('❌ 서버 연결 실패. 서버가 실행 중인지 확인하세요.', 'error');
+        }
+    }
+
+    function interceptFetch() {
+        const originalFetch = window.fetch;
+        window.fetch = async function (...args) {
+            try {
+                const [input, init] = args;
+                const url = typeof input === 'string' ? input : input?.url || '';
+                if (typeof url === 'string' && (url.includes('/submissions') || url.includes('/contests/master/challenges'))) {
+                    log('제출 요청 감지(fetch):', url);
+                    if (init && typeof init.body === 'string') {
+                        try {
+                            const body = JSON.parse(init.body);
+                            const submissionData = buildSubmissionData(body);
+                            log('서버로 전송:', submissionData);
+                            sendToServer(submissionData);
+                        } catch (e) {
+                            log('요청 본문 파싱 실패:', e);
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+            return originalFetch.apply(this, args);
+        };
+        log('fetch hook 설치 완료');
+    }
+
+    function interceptXHR() {
+        const openOrig = XMLHttpRequest.prototype.open;
+        const sendOrig = XMLHttpRequest.prototype.send;
+
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this.__hr_url = url;
+            return openOrig.call(this, method, url, ...rest);
+        };
+
+        XMLHttpRequest.prototype.send = function (body) {
+            try {
+                const url = this.__hr_url || '';
+                if (typeof url === 'string' && (url.includes('/submissions') || url.includes('/contests/master/challenges'))) {
+                    log('제출 요청 감지(XHR):', url);
+                    if (typeof body === 'string') {
+                        try {
+                            const parsed = JSON.parse(body);
+                            const submissionData = buildSubmissionData(parsed);
+                            log('서버로 전송:', submissionData);
+                            sendToServer(submissionData);
+                        } catch (e) {
+                            log('XHR 본문 파싱 실패:', e);
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+            return sendOrig.call(this, body);
+        };
+        log('XHR hook 설치 완료');
+    }
+
+    try {
+        log('스크립트 로드됨');
+        interceptFetch();
+        interceptXHR();
+        log('준비 완료!');
+    } catch (e) {
+        console.error('[HackerRank Logger] 초기화 실패:', e);
+    }
 })();
 
