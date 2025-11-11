@@ -12,7 +12,7 @@
 (function() {
     'use strict';
 
-    const SERVER_URL = 'http://localhost:8080/api/hackerrank/submit';
+    const SERVER_URL = 'http://localhost:9090/api/hackerrank/submit';
     
     console.log('[HackerRank Logger] 스크립트 로드됨');
 

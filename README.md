@@ -57,8 +57,8 @@ cd hackerrank-log
 `src/main/resources/application.properties` 파일을 편집:
 
 ```properties
-# 서버 포트 (기본값: 8080)
-server.port=8080
+# 서버 포트 (기본값: 9090)
+server.port=9090
 
 # 솔루션 저장 경로 (기본값: ./solutions)
 hackerrank.solution.path=./solutions
@@ -81,7 +81,7 @@ hackerrank.git.branch=main
 java -jar build/libs/hackerrank-log-1.0.0.jar
 ```
 
-서버가 `http://localhost:8080`에서 실행됩니다!
+서버가 `http://localhost:9090`에서 실행됩니다!
 
 ### 5. Tampermonkey 스크립트 설치
 
@@ -92,7 +92,7 @@ java -jar build/libs/hackerrank-log-1.0.0.jar
 2. **스크립트 추가**
    - Tampermonkey 아이콘 클릭 → "새 스크립트 생성"
    - `userscript.js` 파일의 내용을 복사 붙여넣기
-   - 서버 URL 확인: `SERVER_URL = 'http://localhost:8080/api/hackerrank/submit'`
+   - 서버 URL 확인: `SERVER_URL = 'http://localhost:9090/api/hackerrank/submit'`
    - Ctrl+S (Cmd+S) 저장
 
 ## 📖 사용 방법
@@ -101,10 +101,10 @@ java -jar build/libs/hackerrank-log-1.0.0.jar
 
 ```bash
 # 상태 확인
-curl http://localhost:8080/api/hackerrank/health
+curl http://localhost:9090/api/hackerrank/health
 
 # Git 저장소 상태 확인
-curl http://localhost:8080/api/hackerrank/git/status
+curl http://localhost:9090/api/hackerrank/git/status
 ```
 
 ### HackerRank 문제 풀기
@@ -120,7 +120,7 @@ curl http://localhost:8080/api/hackerrank/git/status
 cURL로 직접 테스트할 수 있습니다:
 
 ```bash
-curl -X POST http://localhost:8080/api/hackerrank/submit \
+curl -X POST http://localhost:9090/api/hackerrank/submit \
   -H "Content-Type: application/json" \
   -d '{
     "problemName": "Two Sum",
@@ -213,10 +213,10 @@ Python, Java, C++, C, JavaScript, TypeScript, Go, Rust, Kotlin, Swift, Ruby, PHP
 **해결**:
 ```bash
 # 서버 실행 확인
-curl http://localhost:8080/api/hackerrank/health
+curl http://localhost:9090/api/hackerrank/health
 
 # 포트 충돌 확인
-lsof -i :8080
+lsof -i :9090
 
 # 로그 확인
 ./gradlew bootRun
@@ -248,7 +248,7 @@ git config --global user.email "your@email.com"
 **해결**:
 1. Tampermonkey 활성화 확인
 2. 브라우저 콘솔(F12) → Console 탭에서 `[HackerRank Logger]` 로그 확인
-3. 서버 URL이 올바른지 확인: `http://localhost:8080/api/hackerrank/submit`
+3. 서버 URL이 올바른지 확인: `http://localhost:9090/api/hackerrank/submit`
 4. HackerRank 페이지 새로고침
 
 ### 4. Git 인증 문제
