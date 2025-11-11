@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         HackerRank GitHub Logger
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  HackerRank 제출을 자동으로 GitHub에 저장
 // @author       You
 // @match        https://www.hackerrank.com/challenges/*
+// @match        https://www.hackerrank.com/challenges/*/*
 // @grant        GM_xmlhttpRequest
 // @connect      localhost
 // ==/UserScript==
@@ -47,10 +48,10 @@
                     
                     // 제출 데이터 구성
                     const submissionData = {
-                        problem_name: problemName,
+                        problemName: problemName,
                         code: body.code || body.source || '',
                         language: body.language || '',
-                        challenge_id: challengeId,
+                        challengeId: challengeId,
                         difficulty: difficulty,
                         tags: [],
                         timestamp: new Date().toISOString()
@@ -70,16 +71,15 @@
                             console.log('[HackerRank Logger] 서버 응답:', response.responseText);
                             if (response.status === 200) {
                                 console.log('[HackerRank Logger] ✓ GitHub에 저장 완료!');
-                                // 성공 알림 (선택사항)
-                                showNotification('GitHub에 저장되었습니다! ✓', 'success');
+                                showNotification('✅ GitHub에 저장되었습니다!', 'success');
                             } else {
                                 console.error('[HackerRank Logger] ✗ 저장 실패:', response.status);
-                                showNotification('저장 실패: ' + response.status, 'error');
+                                showNotification('❌ 저장 실패: ' + response.status, 'error');
                             }
                         },
                         onerror: function(error) {
                             console.error('[HackerRank Logger] ✗ 요청 실패:', error);
-                            showNotification('서버 연결 실패. 서버가 실행 중인지 확인하세요.', 'error');
+                            showNotification('❌ 서버 연결 실패. 서버가 실행 중인지 확인하세요.', 'error');
                         }
                     });
                 }
