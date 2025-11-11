@@ -163,6 +163,7 @@
         interceptFetch();
         interceptXHR();
         log('준비 완료!');
+        try { window.__HR_LOGGER_INSTALLED__ = true; } catch (e) {}
     } catch (e) {
         console.error('[HackerRank Logger] 초기화 실패:', e);
     }
